@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Calendar as CalendarIcon, Tag, AlertCircle, Trash2 } from 'lucide-react';
+import { X, Clock, Calendar as CalendarIcon, Tag, AlertCircle, Trash2, Bell } from 'lucide-react';
 import { CalendarEvent, CategoryType, PriorityType } from '@/types';
 import { CATEGORIES, PRIORITIES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,7 @@ export function EventModal({
   const [isAllDay, setIsAllDay] = useState(false);
   const [category, setCategory] = useState<CategoryType>('personal');
   const [priority, setPriority] = useState<PriorityType>('media');
+  const [emailReminder, setEmailReminder] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +45,7 @@ export function EventModal({
       setIsAllDay(initialEvent.isAllDay);
       setCategory(initialEvent.category);
       setPriority(initialEvent.priority);
+      setEmailReminder(initialEvent.emailReminder !== false);
     } else {
       setTitle('');
       setDescription('');
@@ -53,6 +55,7 @@ export function EventModal({
       setIsAllDay(false);
       setCategory('personal');
       setPriority('media');
+      setEmailReminder(true);
     }
     setError(null);
   }, [initialEvent, initialDate, isOpen]);
@@ -82,6 +85,7 @@ export function EventModal({
         isAllDay,
         category,
         priority,
+        emailReminder,
       });
       onClose();
     } catch (err: any) {
@@ -279,6 +283,32 @@ export function EventModal({
               onChange={(e) => setDescription(e.target.value)}
               className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm"
             />
+          </div>
+
+          {/* Email Reminder Toggle */}
+          <div className="p-3 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 rounded-2xl flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300 flex items-center justify-center shrink-0">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Recordarme por correo 1 día antes
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Te avisaremos a tu correo para que no se te olvide
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+              <input
+                type="checkbox"
+                checked={emailReminder}
+                onChange={(e) => setEmailReminder(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
           </div>
 
           {/* Actions */}

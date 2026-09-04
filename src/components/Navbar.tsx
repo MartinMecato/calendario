@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Calendar, Sun, Moon, LogOut, User, Filter, Check } from 'lucide-react';
+import { Calendar, Sun, Moon, LogOut, User, Filter, Check, Bell } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
 import { CATEGORIES } from '@/lib/constants';
@@ -18,6 +18,24 @@ export function Navbar({ selectedCategory, onSelectCategory }: Props) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
+
+  const handleTestEmail = async () => {
+    try {
+      setSendingTest(true);
+      const res = await fetch('/api/reminders/test', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`✅ ${data.message || 'Correo de prueba enviado con éxito!'}`);
+      } else {
+        alert(`ℹ️ ${data.error || 'No se pudo enviar el correo de prueba. Verifica tu clave RESEND_API_KEY en Vercel.'}`);
+      }
+    } catch (err) {
+      alert('Error de conexión al enviar correo de prueba.');
+    } finally {
+      setSendingTest(false);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -109,6 +127,19 @@ export function Navbar({ selectedCategory, onSelectCategory }: Props) {
               </>
             )}
           </div>
+
+          {/* Test Email Button */}
+          {user && (
+            <button
+              onClick={handleTestEmail}
+              disabled={sendingTest}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 rounded-xl transition-colors border border-blue-200 dark:border-blue-900"
+              title="Enviar recordatorio de prueba a tu email"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>{sendingTest ? 'Enviando...' : 'Probar Correo'}</span>
+            </button>
+          )}
 
           {/* Theme Toggle */}
           <button

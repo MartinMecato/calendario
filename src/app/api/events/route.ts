@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       isAllDay = false,
       category = 'otro',
       priority = 'media',
+      emailReminder = true,
     } = body;
 
     if (!title || !date) {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
       category,
       priority,
       completed: false,
+      emailReminder,
     });
 
     return NextResponse.json({ event: newEvent }, { status: 201 });

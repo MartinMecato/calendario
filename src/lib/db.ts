@@ -221,3 +221,19 @@ export async function deleteEvent(userId: string, eventId: string): Promise<bool
   }
   return false;
 }
+
+export async function getAllEventsByDate(dateStr: string): Promise<CalendarEvent[]> {
+  const data = ensureDataFile();
+  return data.events.filter((e) => e.date === dateStr);
+}
+
+export async function markReminderSent(eventId: string): Promise<void> {
+  const data = ensureDataFile();
+  const event = data.events.find((e) => e.id === eventId);
+  if (event) {
+    event.reminderSent = true;
+    event.updatedAt = new Date().toISOString();
+    saveData(data);
+  }
+}
+

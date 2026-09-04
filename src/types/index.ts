@@ -21,6 +21,8 @@ export interface CalendarEvent {
   category: CategoryType;
   priority: PriorityType;
   completed: boolean;
+  emailReminder?: boolean;
+  reminderSent?: boolean;
   createdAt: string;
   updatedAt: string;
 }

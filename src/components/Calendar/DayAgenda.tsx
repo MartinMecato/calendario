@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, CheckCircle2, Circle, Clock, MoreVertical, Edit2, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Clock, MoreVertical, Edit2, Trash2, Calendar as CalendarIcon, Bell } from 'lucide-react';
 import { CalendarEvent } from '@/types';
 import { CategoryBadge } from './CategoryBadge';
 import { PRIORITIES } from '@/lib/constants';
@@ -178,6 +178,17 @@ export function DayAgenda({
                         )}
                       >
                         {priorityInfo.label}
+                      </span>
+                    )}
+
+                    {/* Email Reminder Badge */}
+                    {event.emailReminder !== false && (
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded font-medium"
+                        title="Recordatorio por correo 1 día antes activado"
+                      >
+                        <Bell className="w-2.5 h-2.5" />
+                        <span className="hidden sm:inline">1 día antes</span>
                       </span>
                     )}
                   </div>
