@@ -50,7 +50,21 @@ export default function CalendarDashboard() {
     
     // 1. Read from localStorage immediately for 0ms delay
     if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem(storageKey);
+      let cached = localStorage.getItem(storageKey);
+      if (!cached) {
+        // Buscar eventos guardados en localStorage con IDs anteriores para no perder nada
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('calendario_events_') && key !== storageKey) {
+            const val = localStorage.getItem(key);
+            if (val && val.length > 2) {
+              cached = val;
+              localStorage.setItem(storageKey, val);
+              break;
+            }
+          }
+        }
+      }
       if (cached) {
         try {
           const parsed = JSON.parse(cached);

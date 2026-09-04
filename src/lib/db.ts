@@ -72,11 +72,26 @@ export async function findUserById(id: string) {
   return safeUser;
 }
 
+export function getDeterministicUserId(email: string): string {
+  const clean = email.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return 'usr_' + (clean.length > 0 ? clean.slice(0, 16) : 'user');
+}
+
 export async function createUser(name: string, email: string, passwordHash: string): Promise<User> {
   const data = ensureDataFile();
-  const id = 'usr_' + Math.random().toString(36).substring(2, 11);
+  const id = getDeterministicUserId(email);
   const now = new Date().toISOString();
   
+  // Update if already exists or push new
+  const existingIdx = data.users.findIndex((u) => u.email.toLowerCase() === email.toLowerCase());
+  if (existingIdx !== -1) {
+    data.users[existingIdx].name = name;
+    data.users[existingIdx].passwordHash = passwordHash;
+    saveData(data);
+    const { passwordHash: _, ...safeUser } = data.users[existingIdx];
+    return safeUser;
+  }
+
   const newUser = {
     id,
     name,
@@ -87,7 +102,15 @@ export async function createUser(name: string, email: string, passwordHash: stri
 
   data.users.push(newUser);
 
-  // Seed friendly starter tasks for the new user
+  // Check if events already exist for this user id (e.g. from previous sessions)
+  const hasEvents = data.events.some((e) => e.userId === id);
+  if (hasEvents) {
+    saveData(data);
+    const { passwordHash: _, ...safeUser } = newUser;
+    return safeUser;
+  }
+
+  // Seed friendly starter tasks only for brand new users
   const today = new Date();
   const todayStr = formatDateToISO(today);
 
