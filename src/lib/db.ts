@@ -8,22 +8,30 @@ interface DbData {
   events: CalendarEvent[];
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
-const DATA_FILE = path.join(DATA_DIR, 'calendar.json');
+import os from 'os';
 
-// In-memory fallback for environments with read-only filesystems (e.g. serverless without mounts)
+function getDataFilePath(): string {
+  if (process.env.VERCEL) {
+    return path.join(os.tmpdir(), 'calendar.json');
+  }
+  return path.join(process.cwd(), '.data', 'calendar.json');
+}
+
+// In-memory fallback for environments with read-only filesystems
 let memoryStore: DbData = {
   users: [],
   events: [],
 };
 
 function ensureDataFile(): DbData {
+  const filePath = getDataFilePath();
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
-    if (fs.existsSync(DATA_FILE)) {
-      const content = fs.readFileSync(DATA_FILE, 'utf-8');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf-8');
       const parsed = JSON.parse(content);
       memoryStore = parsed;
       return parsed;
@@ -32,18 +40,19 @@ function ensureDataFile(): DbData {
       return memoryStore;
     }
   } catch (err) {
-    // If fs fails (e.g., read-only filesystem on cloud serverless)
     return memoryStore;
   }
 }
 
 function saveData(data: DbData) {
   memoryStore = data;
+  const filePath = getDataFilePath();
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
     // Fallback in memory
   }

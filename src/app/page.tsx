@@ -41,22 +41,44 @@ export default function CalendarDashboard() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch events
+  // Storage key helper
+  const storageKey = user ? `calendario_events_${user.id}` : null;
+
+  // Fetch events with LocalStorage fallback
   const fetchEvents = useCallback(async () => {
-    if (!user) return;
+    if (!user || !storageKey) return;
+    
+    // 1. Read from localStorage immediately for 0ms delay
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(storageKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEvents(parsed);
+          }
+        } catch (e) {}
+      }
+    }
+
     try {
       setLoadingEvents(true);
       const res = await fetch('/api/events');
       if (res.ok) {
         const data = await res.json();
-        setEvents(data.events || []);
+        if (data.events && data.events.length > 0) {
+          setEvents(data.events);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(storageKey, JSON.stringify(data.events));
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching events:', err);
     } finally {
       setLoadingEvents(false);
     }
-  }, [user]);
+  }, [user, storageKey]);
 
   useEffect(() => {
     if (user) {
@@ -86,6 +108,14 @@ export default function CalendarDashboard() {
     setMobileTab('agenda');
   };
 
+  // Helper to persist events locally and in state
+  const persistEvents = (updated: CalendarEvent[]) => {
+    setEvents(updated);
+    if (typeof window !== 'undefined' && storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+    }
+  };
+
   // Event Action Handlers
   const handleOpenNewEvent = (date?: string) => {
     setEditingEvent(null);
@@ -99,62 +129,76 @@ export default function CalendarDashboard() {
   };
 
   const handleSaveEvent = async (eventData: any) => {
+    if (!user) return;
+
     if (editingEvent) {
-      // Update
-      const res = await fetch(`/api/events/${editingEvent.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventData),
-      });
-      if (!res.ok) throw new Error('Error al actualizar la actividad');
-      const data = await res.json();
-      setEvents((prev) => prev.map((e) => (e.id === editingEvent.id ? data.event : e)));
+      // Update locally
+      const updatedEvent: CalendarEvent = {
+        ...editingEvent,
+        ...eventData,
+        updatedAt: new Date().toISOString(),
+      };
+      const updatedList = events.map((e) => (e.id === editingEvent.id ? updatedEvent : e));
+      persistEvents(updatedList);
+
+      // Background server update
+      try {
+        await fetch(`/api/events/${editingEvent.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventData),
+        });
+      } catch (err) {
+        // Safe: already persisted locally
+      }
     } else {
-      // Create
-      const res = await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventData),
-      });
-      if (!res.ok) throw new Error('Error al crear la actividad');
-      const data = await res.json();
-      setEvents((prev) => [...prev, data.event]);
+      // Create locally
+      const newEvent: CalendarEvent = {
+        id: 'evt_' + Math.random().toString(36).substring(2, 11),
+        userId: user.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        completed: false,
+        ...eventData,
+      };
+      const updatedList = [...events, newEvent];
+      persistEvents(updatedList);
+
+      // Background server create
+      try {
+        await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventData),
+        });
+      } catch (err) {
+        // Safe: already persisted locally
+      }
     }
   };
 
   const handleToggleComplete = async (eventId: string, currentCompleted: boolean) => {
-    // Optimistic UI update
-    setEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, completed: !currentCompleted } : e))
+    const updatedList = events.map((e) =>
+      e.id === eventId ? { ...e, completed: !currentCompleted } : e
     );
+    persistEvents(updatedList);
 
     try {
-      const res = await fetch(`/api/events/${eventId}`, {
+      await fetch(`/api/events/${eventId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: !currentCompleted }),
       });
-      if (!res.ok) {
-        // Revert on failure
-        fetchEvents();
-      }
-    } catch (err) {
-      fetchEvents();
-    }
+    } catch (err) {}
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    // Optimistic UI update
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    const updatedList = events.filter((e) => e.id !== eventId);
+    persistEvents(updatedList);
 
     try {
-      const res = await fetch(`/api/events/${eventId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        fetchEvents();
-      }
-    } catch (err) {
-      fetchEvents();
-    }
+      await fetch(`/api/events/${eventId}`, { method: 'DELETE' });
+    } catch (err) {}
   };
 
   // Filtered events
